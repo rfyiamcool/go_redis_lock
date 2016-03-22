@@ -8,10 +8,8 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
-// DefaultTimeout is the duration for which the lock is valid
 const DefaultTimeout = 10 * time.Second
 
-// Lock represents a held lock.
 type Lock struct {
 	resource string
 	token    string
@@ -79,7 +77,7 @@ func main() {
 	fmt.Println("start")
 	conn, err := redis.Dial("tcp", "localhost:6379")
 
-	lock, ok, err := TryLock(conn, "user:123", "token")
+	lock, ok, err := TryLock(conn, "xiaoru.cc", "token")
 	if err != nil {
 		log.Fatal("Error while attempting lock")
 	}
