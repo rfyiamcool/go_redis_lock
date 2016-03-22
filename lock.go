@@ -8,17 +8,15 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
-const DefaultTimeout = 10 * time.Second
-
 type Lock struct {
 	resource string
 	token    string
 	conn     redis.Conn
-	timeout  time.Duration
+	timeout  int
 }
 
 func (lock *Lock) tryLock() (ok bool, err error) {
-	_, err = redis.String(lock.conn.Do("SET", lock.key(), lock.token, "EX", int64(lock.timeout/time.Second), "NX"))
+	_, err = redis.String(lock.conn.Do("SET", lock.key(), lock.token, "EX", int(lock.timeout), "NX"))
 	if err == redis.ErrNil {
 		// The lock was not successful, it already exists.
 		return false, nil
@@ -46,7 +44,7 @@ func (lock *Lock) AddTimeout(ex_time int64) (ok bool, err error) {
 	}
 	if ttl_time > 0 {
 		fmt.Println(11)
-		_, err := redis.String(lock.conn.Do("SET", lock.key(), lock.token, "EX", int64(ttl_time+ex_time)))
+		_, err := redis.String(lock.conn.Do("SET", lock.key(), lock.token, "EX", int(ttl_time+ex_time)))
 		if err == redis.ErrNil {
 			return false, nil
 		}
@@ -57,11 +55,11 @@ func (lock *Lock) AddTimeout(ex_time int64) (ok bool, err error) {
 	return false, nil
 }
 
-func TryLock(conn redis.Conn, resource string, token string) (lock *Lock, ok bool, err error) {
-	return TryLockWithTimeout(conn, resource, token, DefaultTimeout)
+func TryLock(conn redis.Conn, resource string, token string, DefaulTimeout int) (lock *Lock, ok bool, err error) {
+	return TryLockWithTimeout(conn, resource, token, DefaulTimeout)
 }
 
-func TryLockWithTimeout(conn redis.Conn, resource string, token string, timeout time.Duration) (lock *Lock, ok bool, err error) {
+func TryLockWithTimeout(conn redis.Conn, resource string, token string, timeout int) (lock *Lock, ok bool, err error) {
 	lock = &Lock{resource, token, conn, timeout}
 
 	ok, err = lock.tryLock()
@@ -75,9 +73,10 @@ func TryLockWithTimeout(conn redis.Conn, resource string, token string, timeout 
 
 func main() {
 	fmt.Println("start")
+	DefaultTimeout := 10
 	conn, err := redis.Dial("tcp", "localhost:6379")
 
-	lock, ok, err := TryLock(conn, "xiaoru.cc", "token")
+	lock, ok, err := TryLock(conn, "xiaoru.cc", "token", int(DefaultTimeout))
 	if err != nil {
 		log.Fatal("Error while attempting lock")
 	}
@@ -85,7 +84,8 @@ func main() {
 		log.Fatal("bug")
 	}
 	lock.AddTimeout(100)
+
+	time.Sleep(time.Duration(DefaultTimeout) * time.Second)
 	fmt.Println("end")
-	time.Sleep(DefaultTimeout + 5)
 	defer lock.Unlock()
 }
