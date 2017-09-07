@@ -38,12 +38,10 @@ func (lock *Lock) key() string {
 
 func (lock *Lock) AddTimeout(ex_time int64) (ok bool, err error) {
 	ttl_time, err := redis.Int64(lock.conn.Do("TTL", lock.key()))
-	fmt.Println(ttl_time)
 	if err != nil {
 		log.Fatal("redis get failed:", err)
 	}
 	if ttl_time > 0 {
-		fmt.Println(11)
 		_, err := redis.String(lock.conn.Do("SET", lock.key(), lock.token, "EX", int(ttl_time+ex_time)))
 		if err == redis.ErrNil {
 			return false, nil
